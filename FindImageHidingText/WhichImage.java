@@ -5,90 +5,117 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
+import java.util.Arrays;
 
 /**
- * Looks at multiple images. Determines which are most likely to
- * be hiding text.
+ * Looks at multiple images. Checks each combination of LSB and pixel patterns
+ * to determine which image/LSB/pattern combination(s) are most likely to be
+ * text. This is determined by how often the ten most common characters appear in
+ * relation to the total number of characters.
  */
-public class WhichImage3 {
-	static ArrayList<String> results = new ArrayList<String>();
+public class WhichImage {
 	static Scanner sc = new Scanner(System.in);
-	static DecimalFormat df = new DecimalFormat("#.##");
+	static DecimalFormat df = new DecimalFormat("#.###");
+	static HashMap<Integer, String> pixelPatterns = new HashMap<Integer, String>();
+	static ArrayList<String> bestofthebest = new ArrayList<String>();
+	static final int TOPWHAT = 10;
+	static final int THRESHOLD = 50;
 
 	/**
+	 * @param args (unused)
+	 * @throws IOException
+	 * Calls getImages to get the files to be searched.
+	 * Calls getPercentages to determine which is most likely to have text.
+	 * Informs user of results.
 	 */
 	public static void main (String[] args) throws IOException {
+		populatePixelPatterns();
 		ArrayList<File> images = getImages();
 		getPercentages(images);
-		System.out.println("The maximum letter/number/punctuation ratio for each image:\n");
-		for (String i: results)
-			System.out.println(i);
+		System.out.println("\nBest possibilities (percentage = ratio of top " + TOPWHAT + " characters to total characters): ");
+		for (String x : bestofthebest)
+			System.out.println(x);
 		System.out.println();
 	}
 
 	/**
+	 * @param images A list of the image files to be searched.
+	 * @throws IOException
+	 * For each file, for each possible number of LSB, for each pixel pattern,
+	 * finds the TOPWHAT-many most found characters and how often they occur,
+	 * and the number of total characters. Takes the ratio.
+	 * Adds to the list to be printed if the ratio exceeds THRESHOLD.
 	 */
-	private static void getPercentages(ArrayList<File> images) throws IOException {
-		for (int i = 0; i < images.size(); i++)
+	private static void getPercentages(ArrayList<File> images) throws IOException
+	{
+		for (int nextImage = 0; nextImage < images.size(); nextImage++)
 		{
-			double thisScore = 0;
-			double highScore = 0;
-			ArrayList<String> patterns = populatePatterns();
-			BufferedImage nextImage = ImageIO.read(images.get(i));
-			ArrayList<Character> bits = getBits(nextImage);
-			for (int j = 0; j < patterns.size(); j++)
+			BufferedImage nextImage = ImageIO.read(images.get(nextImage));
+			for (int howManyLSB = 0; howManyLSB < 4; howManyLSB++)
 			{
-				ArrayList<Character> thisPattern = new ArrayList<Character>();
-				for (int k = 0; k < bits.size(); k++)
-					if (patterns.get(j).charAt(k%patterns.get(j).length()) == '1')
-						thisPattern.add(bits.get(k));
-				thisScore = getData(thisPattern)*100;
-				if (thisScore > highScore)
-					highScore = thisScore;
+				for (int pixPat = 1; pixPat < 6; pixPat++)
+				{
+					ArrayList<Character> bits = decode(nextImage, howManyLSB, x);
+					int numChars = 0;
+					int[] frequencies = new int[256];
+					for (int i = 0; i < bits.size()-8; i+=8)
+					{
+						String temp = "";
+						for (int j = 0; j < 8; j++)
+							temp += bits.get(i + j);
+						int whichChar = binStringToInt(temp);
+						if (whichChar < 256 && whichChar != 0)
+							frequencies[whichChar]++;
+						if (whichChar !=0)
+							numChars++;
+					}
+					Arrays.sort(frequencies);
+					int mostCommonChars = 0;
+					for (int i = 0; i < TOPWHAT; i++)
+						mostCommonChars += frequencies[255-i];
+					double thisScore = (100* mostCommonChars)/(double)numChars;
+					String output = "" + images.get(nextImage).getName() + " " +
+					howManyLSB + " LSB and pixel pattern " +  pixPat + " (" + pixelPatterns.get(pixPat) + "): " + df.format(thisScore);
+					if (thisScore > THRESHOLD)
+						bestofthebest.add(output);
+					System.out.println("Analyzed " + images.get(nextImage).getName() + " " +
+							howManyLSB + " LSB and pixel pattern " +  pixPat + " (" + pixelPatterns.get(pixPat) + ").");
+				}
 			}
-			results.add(images.get(i).getName() + ": " + df.format(highScore) + "%");
-
+			System.out.println();
 		}
+		System.out.println();
 	}
 
-	private static ArrayList<String> populatePatterns() {
-		ArrayList<String> patterns = new ArrayList<String>();
-		patterns.add("1");
-		patterns.add("011");
-		patterns.add("001");
-		patterns.add("000000000111111111");
-		patterns.add("000000000011011011");
-		patterns.add("000000000001011001");
-		patterns.add("111111111000000000");
-		patterns.add("011011011000000000");
-		patterns.add("001001001000000000");
-		patterns.add("000000000000000000111111111");
-		patterns.add("000000000000000000011011011");
-		patterns.add("000000000000000000001001001");
-		return patterns;
-	}
+	/**
+	 * @param nextImage The image to be mined.
+	 * @param numLSB The number of LSB to be ripped.
+	 *
+	 * Gets pixel data for all pixels but the first.
+	 * Pulls data from the appropriate number of least significant bits
+	 * and from the appropriate pixels.
+	 * Returns an array of characters holding those bits.
+	 */
+	private static ArrayList<Character> decode(BufferedImage nextImage, int numLSB, int whichPattern) {
+		int[] rgb;
+		ArrayList<Character> retval = new ArrayList<Character>();
+		for(int i = 0; i < nextImage.getHeight(); i++)
+			for(int j = 0; j < nextImage.getWidth(); j++)
+				if ((i != 0 || j != 0) && useItOrNot(i*nextImage.getWidth() + j, whichPattern)) {
+					rgb = getPixelData(nextImage, j, i);
+					for (int k = 0; k < 3; k++) {
+						String temp = Integer.toBinaryString(rgb[k] % (int) Math.pow(2, numLSB));
+						while (temp.length() < numLSB)
+							temp = "0" + temp;
+						for (int q = 0; q < temp.length(); q++)
+							retval.add(temp.charAt(q));
+					}
+				}
 
-	private static double getData(ArrayList<Character> bits) {
-		int numChars = 0;
-		int numLetters = 0;
-		String commonPunk = " .,/!\"\\()";
-		for (int i = 9; i < bits.size()-8; i+=8)
-		{
-			String next = "";
-			for (int j = 0; j < 8; j++)
-				next += bits.get(i + j);
-			int temp = binStringToInt(next);
-			char cNext = Character.toChars(temp)[0];
-			if (Character.isLetter(cNext) || cNext == '*' || commonPunk.indexOf(cNext) != -1)
-				numLetters++;
-			if (temp != 0)
-				numChars++;
-		}
-		double score = (double) numLetters / numChars;
-		//System.out.println(score);
-		return score;
+		return retval;
 	}
 
 	/**
@@ -151,24 +178,54 @@ public class WhichImage3 {
 		return rgb;
 	}
 
-	private static ArrayList<Character> getBits (BufferedImage thisImage)
-	{
-		ArrayList<Character> bits = new ArrayList<Character>();
-		for (int column = 0; column < thisImage.getHeight(); column++)
-		{
-			for (int row = 0; row < thisImage.getWidth(); row++)
-			{
-				int[] rgb = getPixelData(thisImage, row , column);
-				for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++)
-				{
-					String inBinary = Integer.toBinaryString(rgb[whichColorByte]%8);
-					while (inBinary.length() < 3)
-						inBinary = "0" + inBinary;
-					for (int whichChar = 0; whichChar < 3; whichChar++)
-						bits.add(inBinary.charAt(whichChar));
-				}
-			}
-		}
-		return bits;
+	/**
+	 * @param thisPixel The pixel currently being read.
+	 * @param whichPixels The int that determines which pixel patterns is being tested.
+	 *
+	 * Determines whether or not to look for data in this pixel.
+	 */
+	private static boolean useItOrNot(int thisPixel, int whichPixels) {
+		boolean[] even = {true, false};
+		boolean[] third = {true, false, false};
+		boolean useThisByte = true;
+		if (whichPixels == 2)
+			return even[thisPixel%2];
+		if (whichPixels == 3)
+			return !even[thisPixel%2];
+		if (whichPixels == 4)
+			return third[thisPixel%3];
+		if (whichPixels == 5)
+			return isItPrime(thisPixel);
+		return useThisByte;
 	}
+
+	/**
+	 * @param n The number of the pixel being considered
+	 * @return Whether the number is prime.
+	 */
+	private static boolean isItPrime (int n) {
+		if (n < 2)
+			return false;
+		if (n == 2 || n == 3)
+			return true;
+		if(n%2 == 0 || n%3 == 0)
+			return false;
+		int sqrtN = (int) Math.sqrt(n)+1;
+		for (int i = 6; i <= sqrtN; i += 6)
+			if(n%(i-1) == 0 || n%(i+1) == 0)
+				return false;
+		return true;
+	}
+
+	/**
+	 * What it says on the tin.
+	 */
+	private static void populatePixelPatterns () {
+		pixelPatterns.put(1, "every pixel");
+		pixelPatterns.put(2, "every even pixel");
+		pixelPatterns.put(3, "every odd pixel");
+		pixelPatterns.put(4, "every third pixel");
+		pixelPatterns.put(5, "every prime-numbered pixel");
+	}
+
 }
