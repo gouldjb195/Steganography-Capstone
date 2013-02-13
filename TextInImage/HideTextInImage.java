@@ -1,4 +1,3 @@
-//package textInImage;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,9 +9,9 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 
 /**
-* Takes a text file and hides it in an image using the x-least significant
-* bits (as chosen by the user).
-*/
+ * Takes a text file and hides it in an image using the x-least significant
+ * bits (as chosen by the user).
+ */
 public class HideTextInImage{
 	static Scanner sc = new Scanner(System.in);
 	static DecimalFormat df = new DecimalFormat("#.##");
@@ -20,18 +19,18 @@ public class HideTextInImage{
 	static HashMap<Character, String> input = new HashMap<Character, String>();
 
 	/**
-	* @params args (unused)
-	* output: An image file containing the text chosen to be hidden by the user.
-	*
-	* Prompts user for file names.
-	* Opens image file to be altered.
-	* Converts desired text file into a series of strings of zeroes and ones
-	* of length eight. Turns these into one long arraylist of characters.
-	* Determines appropriate number of LSB, and whether this text file will fit
-	* in this image.
-	* Calls replaceImage to store bit data in new output image.
-	* Saves output image.
-	*/
+	 * @params args (unused)
+	 * output: An image file containing the text chosen to be hidden by the user.
+	 *
+	 * Prompts user for file names.
+	 * Opens image file to be altered.
+	 * Converts desired text file into a series of strings of zeroes and ones
+	 * of length eight. Turns these into one long arraylist of characters.
+	 * Determines appropriate number of LSB, and whether this text file will fit
+	 * in this image.
+	 * Calls replaceImage to store bit data in new output image.
+	 * Saves output image.
+	 */
 	public static void main(String[] args) throws IOException {
 
 		addCombos();
@@ -71,39 +70,39 @@ public class HideTextInImage{
 	}
 
 	/**
-	* @param Image to be replaced with similar image hiding text,
-	* array list of characters containing zeros and ones to be hidden,
-	* number of least significant bits to mask over.
-	*
-	* For each pixel except the first, pulls rgb data.
-	* (First pixel gets the LSB data.)
-	* Grabs the next numLSB-many bits, converts them to an integer.
-	* Replaces the numLSB-many LSB with this data.
-	*/
+	 * @param Image to be replaced with similar image hiding text,
+	 * array list of characters containing zeros and ones to be hidden,
+	 * number of least significant bits to mask over.
+	 *
+	 * For each pixel except the first, pulls rgb data.
+	 * (First pixel gets the LSB data.)
+	 * Grabs the next numLSB-many bits, converts them to an integer.
+	 * Replaces the numLSB-many LSB with this data.
+	 */
 	private static BufferedImage replaceImage(BufferedImage startImage,
-			ArrayList<Character> tBChars, int numLSB, int iWhichPixels) {
-		int counter = 0;
-		int c2 = 0;
+			ArrayList<Character> ZeroesAndOnes, int numLSB, int iWhichPixels) {
+		int offsetIntoZeroesAndOnes = 0;
+		int currentPixel = 0;
 		BufferedImage retval = new BufferedImage(startImage.getWidth(),startImage.getHeight(),1);
 		int[] rgb;
-		for (int i = 0; i < startImage.getHeight(); i++)
-			for(int j = 0; j < startImage.getWidth(); j++)
+		for (int column = 0; column < startImage.getHeight(); column++)
+			for(int row = 0; row < startImage.getWidth(); row++)
 			{
-				rgb = CommonMethods.getPixelData(startImage, j, i);
-				if ((i != 0 || j != 0) &&  CommonMethods.useItOrNot (c2, iWhichPixels))
-					for (int k = 0; k < 3; k++) {
+				rgb = CommonMethods.getPixelData(startImage, row, column);
+				if ((column != 0 || row != 0) &&  CommonMethods.useItOrNot (currentPixel, iWhichPixels))
+					for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++) {
 						int newData = 0;
-						if (counter < tBChars.size())
-							for (int l = 0; l < numLSB; l++)	{
-								int x = (tBChars.get(counter+l)-'0') * (int) (Math.pow(2, numLSB - l - 1));
-								newData += x;
+						if (offsetIntoZeroesAndOnes < ZeroesAndOnes.size())
+							for (int i = 0; i < numLSB; i++)	{
+								newData += (ZeroesAndOnes.get(offsetIntoZeroesAndOnes+i)-'0') 
+										* (int) (Math.pow(2, numLSB - i - 1));
 							}
-							rgb[k] = (rgb[k] - (int) (rgb[k]%Math.pow(2, numLSB)) + newData);
-						counter+=numLSB;
+						rgb[whichColorByte] = (rgb[whichColorByte] - (int) (rgb[whichColorByte]%Math.pow(2, numLSB)) + newData);
+						offsetIntoZeroesAndOnes+=numLSB;
 					}
 				int final_color = rgb[0]*256*256 + rgb[1]*256 + rgb[2];
-				retval.setRGB(j, i, final_color);
-				c2++;
+				retval.setRGB(row, column, final_color);
+				currentPixel++;
 			}
 		int[] oldFirstPixel = CommonMethods.getPixelData(startImage, 0, 0);
 		int blue =  oldFirstPixel[2];
@@ -112,14 +111,15 @@ public class HideTextInImage{
 		return retval;
 	}
 
-    /**
-    * @params A string representing a (known extant) file from which text will be pulled.
-    * Scans text file line by line. Turns each character into the binary string
-    * representation of its ASCII value.
-    * Adds these to an arraylist of strings.
-    * Adds endlines as appropriate and EOF marker at end.
-    */
-	private static ArrayList<String> getBitsFromFilename (String fileName, boolean encrypt) throws FileNotFoundException	{
+	/**
+	 * @params A string representing a (known extant) file from which text will be pulled.
+	 * Scans text file line by line. Turns each character into the binary string
+	 * representation of its ASCII value.
+	 * Adds these to an arraylist of strings.
+	 * Adds endlines as appropriate and EOF marker at end.
+	 */
+	private static ArrayList<String> getBitsFromFilename (String fileName, boolean encrypt) 
+			throws FileNotFoundException	{
 		File textFile = new File(fileName);
 		Scanner sc = new Scanner(textFile);
 		ArrayList<String> bits = new ArrayList<String>();
@@ -127,16 +127,19 @@ public class HideTextInImage{
 			String nextLine = sc.nextLine();
 			for (int i = 0; i < nextLine.length(); i++)	{
 				int nextChar = (int)nextLine.charAt(i);
-				if (nextChar >=65 && nextChar <=90 && encrypt)
-					nextChar = 155 - nextChar;
-				if (nextChar >=97 && nextChar <=122 && encrypt)
-					nextChar = 219 - nextChar;
+				if (encrypt) // Atbash cipher
+				{
+					if (nextChar >=65 && nextChar <=90)
+						nextChar = 155 - nextChar;
+					if (nextChar >=97 && nextChar <=122)
+						nextChar = 219 - nextChar;
+				}
 				if (nextChar <=255)	{
-				    String temp = Integer.toBinaryString(nextChar);
-                    while (temp.length() < 8)
-                        temp = "0" + temp;
+					String temp = Integer.toBinaryString(nextChar);
+					while (temp.length() < 8)
+						temp = "0" + temp;
 					bits.add(temp);
-                }
+				}
 			}
 			bits.add("00001010");
 		}

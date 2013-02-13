@@ -1,5 +1,3 @@
-//package textInImage;
-
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
@@ -23,7 +21,6 @@ public class RetrieveTextFromImage {
 	 */
 	public static void main(String[] args) throws IOException
 	{
-
 		System.out.print("Enter a file to decode: ");
 		String fileName = CommonMethods.verifyValidFileName(sc.next(),sc);
 
@@ -66,13 +63,14 @@ public class RetrieveTextFromImage {
 	 * @return an arraylist of ASCII characters.
 	 * @throws IOException
 	 */
-	private static ArrayList<Character> decodeBinary(ArrayList<Character> hiddenText) throws IOException {
+	private static ArrayList<Character> decodeBinary(ArrayList<Character> hiddenText) 
+			throws IOException {
 		ArrayList<Character> retval = new ArrayList<Character>();
 		for (int i = 0; i < hiddenText.size()-8; i+=8) {
 			String nextCharBinString = "";
 			for (int j = 0; j < 8; j++)
 				nextCharBinString = nextCharBinString + hiddenText.get(i + j);
-			if (nextCharBinString.equals("00000100"))
+			if (nextCharBinString.equals("00000100")) // end of file marker
 				return retval;
 			char nextChar = (char) Integer.parseInt(nextCharBinString, 2);
 			retval.add(nextChar);
@@ -81,18 +79,19 @@ public class RetrieveTextFromImage {
 	}
 
 
-	private static ArrayList<Character> decode(BufferedImage startImage, int numLSB, int iWhichPixels) {
+	private static ArrayList<Character> decode(BufferedImage startImage, 
+			int numLSB, int iWhichPixels) {
 		int[] rgb;
 		ArrayList<Character> retval = new ArrayList<Character>();
-		for(int i = 0; i < startImage.getHeight(); i++)
-			for(int j = 0; j < startImage.getWidth(); j++)
-				if (i != 0 || j != 0) {
-
-					if (CommonMethods.useItOrNot(i*startImage.getWidth()+j, iWhichPixels))
+		for(int column = 0; column < startImage.getHeight(); column++)
+			for(int row = 0; row < startImage.getWidth(); row++)
+				if (column != 0 || row != 0) {
+					if (CommonMethods.useItOrNot(column*startImage.getWidth()+row, iWhichPixels))
 					{
-						rgb = CommonMethods.getPixelData(startImage, j, i);
-						for (int k = 0; k < 3; k++) {
-							String temp = Integer.toBinaryString(rgb[k] % (int) Math.pow(2, numLSB));
+						rgb = CommonMethods.getPixelData(startImage, row, column);
+						for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++) {
+							String temp = Integer.toBinaryString(rgb[whichColorByte] 
+									% (int) Math.pow(2, numLSB));
 							while (temp.length() < numLSB)
 								temp = "0" + temp;
 							for (int q = 0; q < temp.length(); q++)
