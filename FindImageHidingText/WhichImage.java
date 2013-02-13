@@ -51,14 +51,14 @@ public class WhichImage {
 	 */
 	private static void getPercentages(ArrayList<File> images) throws IOException
 	{
-		for (int nextImage = 0; nextImage < images.size(); nextImage++)
+		for (int iNextImage = 0; iNextImage < images.size(); iNextImage++)
 		{
-			BufferedImage nextImage = ImageIO.read(images.get(nextImage));
+			BufferedImage nextImage = ImageIO.read(images.get(iNextImage));
 			for (int howManyLSB = 0; howManyLSB < 4; howManyLSB++)
 			{
 				for (int pixPat = 1; pixPat < 6; pixPat++)
 				{
-					ArrayList<Character> bits = decode(nextImage, howManyLSB, x);
+					ArrayList<Character> bits = decode(nextImage, howManyLSB, pixPat);
 					int numChars = 0;
 					int[] frequencies = new int[256];
 					for (int i = 0; i < bits.size()-8; i+=8)
@@ -77,11 +77,11 @@ public class WhichImage {
 					for (int i = 0; i < TOPWHAT; i++)
 						mostCommonChars += frequencies[255-i];
 					double thisScore = (100* mostCommonChars)/(double)numChars;
-					String output = "" + images.get(nextImage).getName() + " " +
+					String output = "" + images.get(iNextImage).getName() + " " +
 					howManyLSB + " LSB and pixel pattern " +  pixPat + " (" + pixelPatterns.get(pixPat) + "): " + df.format(thisScore);
 					if (thisScore > THRESHOLD)
 						bestofthebest.add(output);
-					System.out.println("Analyzed " + images.get(nextImage).getName() + " " +
+					System.out.println("Analyzed " + images.get(iNextImage).getName() + " " +
 							howManyLSB + " LSB and pixel pattern " +  pixPat + " (" + pixelPatterns.get(pixPat) + ").");
 				}
 			}
@@ -102,16 +102,16 @@ public class WhichImage {
 	private static ArrayList<Character> decode(BufferedImage nextImage, int numLSB, int whichPattern) {
 		int[] rgb;
 		ArrayList<Character> retval = new ArrayList<Character>();
-		for(int i = 0; i < nextImage.getHeight(); i++)
-			for(int j = 0; j < nextImage.getWidth(); j++)
-				if ((i != 0 || j != 0) && useItOrNot(i*nextImage.getWidth() + j, whichPattern)) {
-					rgb = getPixelData(nextImage, j, i);
-					for (int k = 0; k < 3; k++) {
-						String temp = Integer.toBinaryString(rgb[k] % (int) Math.pow(2, numLSB));
+		for(int column = 0; column < nextImage.getHeight(); column++)
+			for(int row = 0; row < nextImage.getWidth(); row++)
+				if ((column != 0 || row != 0) && useItOrNot(column*nextImage.getWidth() + row, whichPattern)) {
+					rgb = getPixelData(nextImage, row, column);
+					for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++) {
+						String temp = Integer.toBinaryString(rgb[whichColorByte] % (int) Math.pow(2, numLSB));
 						while (temp.length() < numLSB)
 							temp = "0" + temp;
-						for (int q = 0; q < temp.length(); q++)
-							retval.add(temp.charAt(q));
+						for (int i = 0; i < temp.length(); i++)
+							retval.add(temp.charAt(i));
 					}
 				}
 
