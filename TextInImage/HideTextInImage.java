@@ -42,7 +42,10 @@ public class HideTextInImage{
 		System.out.print("Text file to be hidden: ");
 		String text_file_name = CommonMethods.verifyValidFileName(sc.next(), sc);
 
-		ArrayList<String> eachCharAsStringOfEightBits = getBitsFromFilename(text_file_name);
+		System.out.print("Encode text (y/n): ");
+		boolean encrypt = getYesNo(sc.next(), sc);
+
+		ArrayList<String> eachCharAsStringOfEightBits = getBitsFromFilename(text_file_name, encrypt);
 		ArrayList<Character> listOfZerosAndOnes = new ArrayList<Character>();
 		for (int i = 0; i < eachCharAsStringOfEightBits.size(); i++)
 			for (int j = 0; j < 8; j++)
@@ -116,7 +119,7 @@ public class HideTextInImage{
     * Adds these to an arraylist of strings.
     * Adds endlines as appropriate and EOF marker at end.
     */
-	private static ArrayList<String> getBitsFromFilename (String fileName) throws FileNotFoundException	{
+	private static ArrayList<String> getBitsFromFilename (String fileName, boolean encrypt) throws FileNotFoundException	{
 		File textFile = new File(fileName);
 		Scanner sc = new Scanner(textFile);
 		ArrayList<String> bits = new ArrayList<String>();
@@ -124,6 +127,10 @@ public class HideTextInImage{
 			String nextLine = sc.nextLine();
 			for (int i = 0; i < nextLine.length(); i++)	{
 				int nextChar = (int)nextLine.charAt(i);
+				if (nextChar >=65 && nextChar <=90 && encrypt)
+					nextChar = 155 - nextChar;
+				if (nextChar >=97 && nextChar <=122 && encrypt)
+					nextChar = 219 - nextChar;
 				if (nextChar <=255)	{
 				    String temp = Integer.toBinaryString(nextChar);
                     while (temp.length() < 8)
@@ -243,6 +250,19 @@ public class HideTextInImage{
 				break;
 		}
 		return combos.get(input.get(first));
+	}
+
+	private static boolean getYesNo(String response, Scanner sc)
+	{
+		String test = "yn";
+		while (test.indexOf(response.toLowerCase().charAt(0)) == -1)
+		{
+			System.out.print("Response not recognized. Try again: ");
+			response = sc.next();
+		}
+		if (response.toLowerCase().charAt(0) == 'y')
+			return true;
+		return false;
 	}
 
 }
