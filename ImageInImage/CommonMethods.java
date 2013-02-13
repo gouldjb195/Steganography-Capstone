@@ -83,5 +83,18 @@ public class CommonMethods {
 			return isItPrime(thisPixel);
 		return useThisByte;
 	}
+	
+	public static boolean getYesNo(String response, Scanner sc)
+	{
+		String test = "yn";
+		while (test.indexOf(response.toLowerCase().charAt(0)) == -1)
+		{
+			System.out.print("Response not recognized. Try again: ");
+			response = sc.next();
+		}
+		if (response.toLowerCase().charAt(0) == 'y')
+			return true;
+		return false;
+	}
 
 }

@@ -84,5 +84,17 @@ public class CommonMethods {
 				return false;
 		return true;
 	}
-
+	
+	public static boolean getYesNo(String response, Scanner sc)
+	{
+		String test = "yn";
+		while (test.indexOf(response.toLowerCase().charAt(0)) == -1)
+		{
+			System.out.print("Response not recognized. Try again: ");
+			response = sc.next();
+		}
+		if (response.toLowerCase().charAt(0) == 'y')
+			return true;
+		return false;
+	}
 }

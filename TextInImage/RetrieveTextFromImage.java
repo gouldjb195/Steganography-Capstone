@@ -32,9 +32,9 @@ public class RetrieveTextFromImage {
 
 		int numLSB = 0;
 		int iWhichPixels = 0;
-		System.out.print("Ignorant search (Y/N)? ");
-		String response = sc.next();
-		if (response.toUpperCase().charAt(0) == 'Y')
+		System.out.print("Ignorant search (y/n)? ");
+		boolean response = CommonMethods.getYesNo(sc.next(), sc);
+		if (response)
 		{
 			numLSB = 1;
 			iWhichPixels = 1;

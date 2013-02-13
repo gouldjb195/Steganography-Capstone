@@ -66,11 +66,11 @@ public class HideImageInImage {
 
 		ArrayList<Integer> colors = new ArrayList<Integer>();
 		int[] nextThreeBytes = new int[3];
-		for (int i = 0; i < hidden_image.getHeight(); i++)
-			for (int j = 0; j < hidden_image.getWidth(); j++) {
-				nextThreeBytes = CommonMethods.getPixelData(hidden_image, j, i);
-				for (int r = 0; r < 3; r++)
-					colors.add(nextThreeBytes[r]);
+		for (int column = 0; column < hidden_image.getHeight(); column++)
+			for (int row = 0; row < hidden_image.getWidth(); row++) {
+				nextThreeBytes = CommonMethods.getPixelData(hidden_image, row, column);
+				for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++)
+					colors.add(nextThreeBytes[whichColorByte]);
 			}
 		ArrayList<String> eachColorByteAsStringOfEightBits = getBitsFromIntArray(colors);
 
@@ -210,31 +210,33 @@ public class HideImageInImage {
 	 */
 	private static BufferedImage replaceImage(BufferedImage startImage,
 			ArrayList<Character> bitsToHide, int numLSB, int width, int height, int whichPixels) throws IOException	{
-		int counter = 0;
-		int c2 = 0;
+		int offetIntoBitsToHide = 0;
+		int currentPixel = 0;
 		BufferedImage retval = new BufferedImage(startImage.getWidth(),startImage.getHeight(),1);
 		int[] rgb;
 		retval.setRGB(0, 0, numLSB + 256*whichPixels);
 		retval.setRGB(1, 0, width);
 		retval.setRGB(2, 0, height);
-		for (int i = 0; i < startImage.getHeight(); i++) // for each row
-			for(int j = 0; j < startImage.getWidth(); j++) { // for each column
-				if (c2 >= 3) { // ignore first three (metadata) bytes
-					rgb = CommonMethods.getPixelData(startImage, j, i);
-					if (CommonMethods.useItOrNot (c2, whichPixels)) { // if this byte will get data
-						for (int k = 0; k < 3; k++) { // for each color byte
+		for (int column = 0; column < startImage.getHeight(); column++) // for each row
+			for(int row = 0; row < startImage.getWidth(); row++) { // for each column
+				if (currentPixel >= 3) { // ignore first three (metadata) pixels
+					rgb = CommonMethods.getPixelData(startImage, row, column);
+					if (CommonMethods.useItOrNot (currentPixel, whichPixels)) { // if this byte will get data
+						for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++) { // for each color byte
 							int newData = 0;
 							// if still data left to hide
-							if (counter + numLSB < bitsToHide.size())
-								for (int l = 0; l < numLSB; l++)
-									newData += (bitsToHide.get(counter+l)-'0') * (int) (Math.pow(2, numLSB - l - 1));
-							rgb[k] = (rgb[k] - (int) (rgb[k]%Math.pow(2, numLSB)) + newData);
-							counter+=numLSB;
+							if (offetIntoBitsToHide + numLSB < bitsToHide.size())
+								for (int i = 0; i < numLSB; i++)
+									newData += (bitsToHide.get(offetIntoBitsToHide+i)-'0') 
+									* (int) (Math.pow(2, numLSB - i - 1));
+							rgb[whichColorByte] = (rgb[whichColorByte] 
+									- (int) (rgb[whichColorByte]%Math.pow(2, numLSB)) + newData);
+							offetIntoBitsToHide+=numLSB;
 						}
 					}
-					retval.setRGB(j, i, rgb[0]*256*256 + rgb[1]*256 + rgb[2]);
+					retval.setRGB(row, column, rgb[0]*256*256 + rgb[1]*256 + rgb[2]);
 				}
-				c2++;
+				currentPixel++;
 			}
 		return retval;
 	}
@@ -269,9 +271,9 @@ public class HideImageInImage {
 		while (loop) {
 			File potentialOutputFile = new File(outputFileName);
 			if (potentialOutputFile.exists()) {
-				System.out.print("That file exists. Overwrite (Y/N)? ");
-				String response = sc.next();
-				if (Character.toLowerCase(response.charAt(0)) == 'n') {
+				System.out.print("That file exists. Overwrite (y/n)? ");
+				boolean response = CommonMethods.getYesNo(sc.next(),sc);
+				if (!response) {
 					System.out.print("Enter a new destination file name: ");
 					outputFileName = sc.next();
 				}

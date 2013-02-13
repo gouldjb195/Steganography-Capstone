@@ -10,7 +10,6 @@ import javax.imageio.ImageIO;
  * Driver for removing an image from a PNG file.
  */
 public class RetrieveImageFromImage{
-	static Scanner sc = new Scanner(System.in);
 
 	/**
 	 * @param args (unused)
@@ -28,22 +27,23 @@ public class RetrieveImageFromImage{
 	 */
 	public static void main(String[] args) throws IOException
 	{
+		Scanner sc = new Scanner(System.in);
 		System.out.print("Enter a file to decode: ");
 		String fileName = sc.next();
 		fileName = CommonMethods.verifyValidFileName(fileName,sc);
 
 		System.out.print("Enter a destination file name (\".png\" will be appended automatically): ");
 		String outputFileName = sc.next() + ".png";
-		outputFileName = testForOverwrite(outputFileName);
+		outputFileName = testForOverwrite(outputFileName, sc);
 
 		System.out.print("Ignorant search (y/n)? ");
-		String checkall = sc.next();
+		boolean checkall = CommonMethods.getYesNo(sc.next(), sc);
 
 		BufferedImage start_image = ImageIO.read(new File(fileName));
 		int[] firstRGB = CommonMethods.getPixelData(start_image,0,0);
 		int whichBytes = 0;
 		int numLSB;
-		if (checkall.toLowerCase().charAt(0) == 'y')
+		if (checkall)
 		{
 			whichBytes = 1;
 			numLSB = 1;
@@ -54,8 +54,8 @@ public class RetrieveImageFromImage{
 			numLSB = firstRGB[2];
 		}
 
-		System.out.println("Detecting the use of " + numLSB + " least significant bits.");
-		System.out.println(whichBytes);
+		System.out.println("Checking " + numLSB + " least significant bits.");
+		System.out.println("Checking pixel pattern #" + whichBytes);
 		int[] secondRGB = CommonMethods.getPixelData(start_image, 1, 0);
 		int width = secondRGB[0]*256*256 + secondRGB[1]*256 + secondRGB[2];
 		int[] thirdRGB = CommonMethods.getPixelData(start_image, 2, 0);
@@ -89,10 +89,10 @@ public class RetrieveImageFromImage{
 			int newInt = binStringToInt(temporary);
 			list.add(newInt);
 		}
-		for (int i = 0; i < height; i++)
-			for (int j = 0; j < width; j++)
-				if (i*width+j < list.size())
-					newImage.setRGB(j, i, list.get(i*width + j));
+		for (int column = 0; column < height; column++)
+			for (int row = 0; row < width; row++)
+				if (column*width+row < list.size())
+					newImage.setRGB(row, column, list.get(column*width + row));
 		ImageIO.write(newImage, "PNG", new File(outputFileName));
 	}
 
@@ -117,14 +117,14 @@ public class RetrieveImageFromImage{
 	 * overwrite is desired. If so, returns same name.
 	 * Otherwise, prompts for new file name. Repeats process.
 	 */
-	private static String testForOverwrite(String outputFileName) {
+	private static String testForOverwrite(String outputFileName, Scanner sc) {
 		boolean loop = true;
 		while (loop) {
 			File potentialOutputFile = new File(outputFileName);
 			if (potentialOutputFile.exists()) {
-				System.out.print("That file exists. Overwrite (Y/N)? ");
-				String response = sc.next();
-				if (Character.toLowerCase(response.charAt(0)) == 'n') {
+				System.out.print("That file exists. Overwrite (y/n)? ");
+				boolean response = CommonMethods.getYesNo(sc.next(), sc);
+				if (!response) {
 					System.out.print("Enter a new destination file name: ");
 					outputFileName = sc.next();
 				}
@@ -146,23 +146,23 @@ public class RetrieveImageFromImage{
 		int[] rgb;
 		int counter = 0;
 		ArrayList<Character> retval = new ArrayList<Character>();
-		for(int i = 0; i < startImage.getHeight(); i++)
-			for(int j = 0; j < startImage.getWidth(); j++)
+		for(int column = 0; column < startImage.getHeight(); column++)
+			for(int row = 0; row < startImage.getWidth(); row++)
 			{
 				if (CommonMethods.useItOrNot(counter, whichPixels) && (counter >= 3))
 				{
-					rgb = CommonMethods.getPixelData(startImage, j, i);
-					for (int k = 0; k < 3; k++) {
-						String temp = Integer.toBinaryString(rgb[k] % (int) Math.pow(2, numLSB));
+					rgb = CommonMethods.getPixelData(startImage, row, column);
+					for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++) {
+						String temp = Integer.toBinaryString(rgb[whichColorByte] 
+								% (int) Math.pow(2, numLSB));
 						while (temp.length() < numLSB)
 							temp = "0" + temp;
-						for (int q = 0; q < temp.length(); q++)
-							retval.add(temp.charAt(q));
+						for (int i = 0; i < temp.length(); i++)
+							retval.add(temp.charAt(i));
 					}
 				}
 				counter++;
 			}
 		return retval;
 	}
-
 }

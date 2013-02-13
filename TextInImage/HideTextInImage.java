@@ -42,7 +42,7 @@ public class HideTextInImage{
 		String text_file_name = CommonMethods.verifyValidFileName(sc.next(), sc);
 
 		System.out.print("Encode text (y/n): ");
-		boolean encrypt = getYesNo(sc.next(), sc);
+		boolean encrypt = CommonMethods.getYesNo(sc.next(), sc);
 
 		ArrayList<String> eachCharAsStringOfEightBits = getBitsFromFilename(text_file_name, encrypt);
 		ArrayList<Character> listOfZerosAndOnes = new ArrayList<Character>();
@@ -254,18 +254,4 @@ public class HideTextInImage{
 		}
 		return combos.get(input.get(first));
 	}
-
-	private static boolean getYesNo(String response, Scanner sc)
-	{
-		String test = "yn";
-		while (test.indexOf(response.toLowerCase().charAt(0)) == -1)
-		{
-			System.out.print("Response not recognized. Try again: ");
-			response = sc.next();
-		}
-		if (response.toLowerCase().charAt(0) == 'y')
-			return true;
-		return false;
-	}
-
 }
