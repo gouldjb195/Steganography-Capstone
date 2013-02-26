@@ -63,13 +63,15 @@ public class RetrieveTextFromImage {
 	 * @return an arraylist of ASCII characters.
 	 * @throws IOException
 	 */
-	private static ArrayList<Character> decodeBinary(ArrayList<Character> hiddenText) 
+	private static ArrayList<Character> decodeBinary(ArrayList<Character> hiddenText)
 			throws IOException {
 		ArrayList<Character> retval = new ArrayList<Character>();
 		for (int i = 0; i < hiddenText.size()-8; i+=8) {
 			String nextCharBinString = "";
 			for (int j = 0; j < 8; j++)
 				nextCharBinString = nextCharBinString + hiddenText.get(i + j);
+			if (nextCharBinString.equals("00001010")) // turns \n into \r\n
+				retval.add((char) 13);
 			if (nextCharBinString.equals("00000100")) // end of file marker
 				return retval;
 			char nextChar = (char) Integer.parseInt(nextCharBinString, 2);
@@ -79,7 +81,7 @@ public class RetrieveTextFromImage {
 	}
 
 
-	private static ArrayList<Character> decode(BufferedImage startImage, 
+	private static ArrayList<Character> decode(BufferedImage startImage,
 			int numLSB, int iWhichPixels) {
 		int[] rgb;
 		ArrayList<Character> retval = new ArrayList<Character>();
@@ -90,7 +92,7 @@ public class RetrieveTextFromImage {
 					{
 						rgb = CommonMethods.getPixelData(startImage, row, column);
 						for (int whichColorByte = 0; whichColorByte < 3; whichColorByte++) {
-							String temp = Integer.toBinaryString(rgb[whichColorByte] 
+							String temp = Integer.toBinaryString(rgb[whichColorByte]
 									% (int) Math.pow(2, numLSB));
 							while (temp.length() < numLSB)
 								temp = "0" + temp;
